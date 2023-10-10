@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Web Scraping Demo</title>
+</head>
+<body>
+  <h1>Web Scraping Demo</h1>
+  <button id="scrapeButton">Scrape Data</button>
+  <p id="statusMessage"></p>
+
+  <script>
+    async function scrapeData() {
+      try {
+        // Display status message
+        document.getElementById("statusMessage").textContent = "Scraping data...";
+
+        // Perform the web scraping using the provided JavaScript code
+        const response = await fetch('https://www.bigbasket.com/cl/foodgrains-oil-masala/?nc=nb');
+        const html = await response.text();
+
+        // Extract the data from the HTML using DOM manipulation
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const products = doc.querySelectorAll('div.item.prod-deck.row.ng-scope');
+
+        const data = [];
+        for (let product of products) {
+          const nameElement = product.querySelector('a.ng-binding');
+          const name = nameElement ? nameElement.innerText.trim() : '';
+          const link = nameElement ? 'https://www.bigbasket.com' + nameElement.getAttribute('href') : '';
+          const mrpElement = product.querySelector('.mp-price');
+          const mrp = mrpElement ? mrpElement.innerText.split(' ')[1] : 0;
+          const discountElement = product.querySelector('.discnt-price');
+          const discount = discountElement ? discountElement.innerText.split(' ')[1] : 0;
+          const discountPercentageElement = product.querySelector('.save-price.ng-scope .ng-binding');
+          const discountPercent = discountPercentageElement ? discountPercentageElement.innerText.trim() : 0;
+
+          data.push({ 'Name': name, 'Link': link, 'MRP': mrp, 'DiscountedPrice': discount, 'DiscountPercent': discountPercent });
+        }
+
+        // Convert data to CSV format
+        const csvContent = [
+          'Name,Link,MRP,DiscountedPrice,DiscountPercent',
+          ...data.map(entry => `${entry.Name},${entry.Link},${entry.MRP},${entry.DiscountedPrice},${entry.DiscountPercent}`)
+        ].join('\n');
+
+        // Create a Blob object from the CSV content
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+
+        // Create a download link and trigger the download
+        const downloadLink = document.createElement('a');
+        downloadLink.href = URL.createObjectURL(blob);
+        downloadLink.download = 'scraped_data.csv';
+        downloadLink.click();
+
+        // Display success message
+        document.getElementById("statusMessage").textContent = "Data scraped and downloaded successfully!";
+      } catch (error) {
+        // Display error message
+        document.getElementById("statusMessage").textContent = "Error occurred while scraping data!";
+        console.error(error);
+      }
+    }
+
+    document.getElementById("scrapeButton").addEventListener("click", scrapeData);
+  </script>
+</body>
+</html>
